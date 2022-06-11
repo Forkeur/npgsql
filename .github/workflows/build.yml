@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'hotfix/**'
+      - ci_mod
     tags:
       - '*'
   pull_request:
@@ -319,7 +320,7 @@ jobs:
   publish-ci:
     needs: build
     runs-on: ubuntu-20.04
-    if: github.event_name == 'push' && github.repository == 'npgsql/npgsql'
+    if: github.event_name == 'push' && github.repository == 'Forkeur/npgsql'
     environment: myget
 
     steps:
@@ -342,7 +343,10 @@ jobs:
       - name: Pack
         run: dotnet pack Npgsql.sln --configuration Release --output nupkgs --version-suffix "ci.$(date -u +%Y%m%dT%H%M%S)+sha.${GITHUB_SHA:0:9}" -p:ContinuousIntegrationBuild=true
 
+      - run: dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+
       - name: Upload artifacts (nupkg)
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: Npgsql.CI
@@ -350,12 +354,12 @@ jobs:
 
       - name: Publish packages to MyGet (vnext)
         if: startsWith(github.ref, 'refs/heads/') && startsWith(github.ref, 'refs/heads/hotfix/') == false
-        run: dotnet nuget push "*.nupkg" --api-key ${{ secrets.MYGET_FEED_TOKEN }} --source https://www.myget.org/F/npgsql-vnext/api/v3/index.json
+        run: dotnet nuget push "*.nupkg" --source "github" --api-key ${{ secrets.GITHUB_TOKEN }}
         working-directory: nupkgs
 
       - name: Publish packages to MyGet (patch)
         if: startsWith(github.ref, 'refs/heads/hotfix/')
-        run: dotnet nuget push "*.nupkg" --api-key ${{ secrets.MYGET_FEED_TOKEN }} --source https://www.myget.org/F/npgsql/api/v3/index.json
+        run: dotnet nuget push "*.nupkg" --source "github" --api-key ${{ secrets.GITHUB_TOKEN }}
         working-directory: nupkgs
 
   release:
