@@ -1553,6 +1553,10 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
             CommandType = CommandType.Text;
             _parameters.Clear();
             _connection.CachedCommand = this;
+            foreach (var batchCommand in InternalBatchCommands)
+            {
+                batchCommand.Reset();
+            }
             return;
         }
 
